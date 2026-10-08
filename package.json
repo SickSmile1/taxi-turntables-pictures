@@ -1,0 +1,11 @@
+{
+  "name": "taxi-turntables-pictures",
+  "version": "1.0.0",
+  "description": "Taxi-Alica vehicle 360-degree turntable frames, high-resolution fleet photography, and 360 viewer components",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve -l 3002 .",
+    "preview": "npx serve -l 3002 ."
+  }
+}

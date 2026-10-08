@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi Alica — 360° Turntable & Fleet Photo Gallery</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #0c0e14; color: #f0f0f0; line-height: 1.5; padding: 24px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; }
+        h1 { font-size: 28px; font-weight: 700; color: #e6b032; margin-bottom: 8px; }
+        p.subtitle { color: #8b949e; font-size: 15px; }
+        
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 36px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+        .card-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .card-title { font-size: 18px; font-weight: 600; color: #f0f0f0; }
+
+        /* Viewer UI */
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        select, button {
+            background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+            padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s;
+        }
+        select:hover, button:hover { background: #30363d; border-color: #8b949e; color: #fff; }
+        button.active { background: #e6b032; color: #0c0e14; border-color: #e6b032; font-weight: 600; }
+
+        .viewer-stage {
+            position: relative; width: 100%; aspect-ratio: 16/9; max-height: 540px;
+            background: radial-gradient(circle, #1a202c 0%, #0d1117 100%);
+            border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+            cursor: grab; user-select: none; border: 1px solid rgba(255,255,255,0.06);
+        }
+        .viewer-stage:active { cursor: grabbing; }
+        .viewer-stage img { max-width: 90%; max-height: 90%; object-fit: contain; pointer-events: none; }
+        
+        .hud-overlay {
+            position: absolute; bottom: 12px; left: 16px; right: 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; color: #8b949e; pointer-events: none;
+        }
+        .hud-badge { background: rgba(0,0,0,0.65); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
+
+        .range-slider { width: 100%; margin-top: 16px; accent-color: #e6b032; }
+
+        /* Gallery Grid */
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+        .gallery-item {
+            background: #0d1117; border: 1px solid #30363d; border-radius: 8px; overflow: hidden;
+            cursor: pointer; transition: transform 0.2s, border-color 0.2s;
+        }
+        .gallery-item:hover { transform: translateY(-3px); border-color: #e6b032; }
+        .gallery-thumb { width: 100%; height: 200px; object-fit: cover; display: block; }
+        .gallery-caption { padding: 12px 14px; font-size: 13px; font-weight: 500; color: #c9d1d9; }
+
+        /* Modal */
+        #lightbox {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); backdrop-filter: blur(8px);
+            z-index: 1000; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out;
+        }
+        #lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Taxi Alica — 360° Studio & Fleet Gallery</h1>
+        <p class="subtitle">Interactive vehicle turntables (72 frames & 8 cardinal angles) & high-resolution fleet photography</p>
+    </header>
+
+    <!-- Turntable Section -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Interactive 360° Turntable Studio</div>
+            <div class="controls">
+                <select id="carSelect">
+                    <option value="e220">Mercedes-Benz E 220 d (Polar White)</option>
+                    <option value="vito">Mercedes-Benz Vito Tourer (Obsidian Black)</option>
+                    <option value="s90">Volvo S90 Inscription (Crystal White)</option>
+                    <option value="v90">Volvo V90 Cross Country (Onyx Black)</option>
+                </select>
+                <button id="togglePlay">▶ Auto-Spin</button>
+                <button id="resetAngle">↺ Reset 0°</button>
+            </div>
+        </div>
+
+        <div class="viewer-stage" id="stage">
+            <img id="carImage" src="public/cars/01_mercedes_e220_white/02_turntable_72_frames/mercedes_e220_frame_00_000deg.jpg" alt="Car 360 View">
+            <div class="hud-overlay">
+                <div class="hud-badge" id="frameLabel">Frame: 00 / 71 (0°)</div>
+                <div class="hud-badge">Drag or scroll horizontally to rotate ↔</div>
+            </div>
+        </div>
+
+        <input type="range" id="frameSlider" class="range-slider" min="0" max="71" value="0">
+    </div>
+
+    <!-- Gallery Section -->
+    <div class="card">
+        <div class="card-title" style="margin-bottom: 16px;">High-Resolution Fleet Photography</div>
+        <div class="gallery-grid">
+            <div class="gallery-item" onclick="openLightbox('public/cars/gemini_fleet_showcase.jpg')">
+                <img class="gallery-thumb" src="public/cars/gemini_fleet_showcase.jpg" alt="Fleet Showcase">
+                <div class="gallery-caption">Executive Fleet Showcase — Freiburg im Breisgau</div>
+            </div>
+            <div class="gallery-item" onclick="openLightbox('public/cars/alle_autos.jpg')">
+                <img class="gallery-thumb" src="public/cars/alle_autos.jpg" alt="Full Fleet Lineup">
+                <div class="gallery-caption">Complete Vehicle Lineup (Limousines & Minivans)</div>
+            </div>
+            <div class="gallery-item" onclick="openLightbox('public/cars/bus_innen.jpg')">
+                <img class="gallery-thumb" src="public/cars/bus_innen.jpg" alt="Mercedes Vito Interior">
+                <div class="gallery-caption">Mercedes Vito Tourer — Luxury 8-Passenger Interior</div>
+            </div>
+            <div class="gallery-item" onclick="openLightbox('public/cars/bus_tuer.jpg')">
+                <img class="gallery-thumb" src="public/cars/bus_tuer.jpg" alt="Mercedes Vito Boarding">
+                <div class="gallery-caption">Easy Access Sliding Side Door & Ample Luggage Space</div>
+            </div>
+            <div class="gallery-item" onclick="openLightbox('public/cars/mercedes_e220_hero.png')">
+                <img class="gallery-thumb" src="public/cars/mercedes_e220_hero.png" alt="Mercedes E220 Hero">
+                <div class="gallery-caption">Mercedes-Benz E 220 d — Hero Studio Cutout</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="lightbox" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt="Zoomed view">
+</div>
+
+<script>
+const CARS = {
+    e220: {
+        folder: 'public/cars/01_mercedes_e220_white/02_turntable_72_frames/',
+        prefix: 'mercedes_e220_frame_',
+        frames: 72
+    },
+    vito: {
+        folder: 'public/cars/02_mercedes_vito_black/02_turntable_72_frames/',
+        prefix: 'mercedes_vito_frame_',
+        frames: 72
+    },
+    s90: {
+        folder: 'public/cars/03_volvo_s90_white/02_turntable_72_frames/',
+        prefix: 'volvo_s90_frame_',
+        frames: 72
+    },
+    v90: {
+        folder: 'public/cars/04_volvo_v90_black/02_turntable_72_frames/',
+        prefix: 'volvo_v90_frame_',
+        frames: 72
+    }
+};
+
+let currentCar = 'e220';
+let currentFrame = 0;
+let isPlaying = false;
+let playInterval = null;
+
+const imgEl = document.getElementById('carImage');
+const slider = document.getElementById('frameSlider');
+const frameLabel = document.getElementById('frameLabel');
+const playBtn = document.getElementById('togglePlay');
+const stage = document.getElementById('stage');
+
+function getFrameFilename(carKey, index) {
+    const deg = Math.round(index * 5);
+    const idxStr = String(index).padStart(2, '0');
+    const degStr = String(deg).padStart(3, '0');
+    const cfg = CARS[carKey];
+    return `${cfg.folder}${cfg.prefix}${idxStr}_${degStr}deg.jpg`;
+}
+
+function updateFrame(index) {
+    currentFrame = ((index % 72) + 72) % 72;
+    imgEl.src = getFrameFilename(currentCar, currentFrame);
+    slider.value = currentFrame;
+    const deg = Math.round(currentFrame * 5);
+    frameLabel.textContent = `Frame: ${String(currentFrame).padStart(2, '0')} / 71 (${deg}°)`;
+}
+
+// Drag logic
+let isDragging = false;
+let startX = 0;
+let startFrame = 0;
+
+stage.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    startFrame = currentFrame;
+    if (isPlaying) stopPlay();
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const frameDelta = Math.round(dx / 7);
+    updateFrame(startFrame - frameDelta);
+});
+
+window.addEventListener('mouseup', () => { isDragging = false; });
+
+// Touch logic
+stage.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    startX = e.touches[0].clientX;
+    startFrame = currentFrame;
+    if (isPlaying) stopPlay();
+});
+
+window.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const dx = e.touches[0].clientX - startX;
+    const frameDelta = Math.round(dx / 7);
+    updateFrame(startFrame - frameDelta);
+});
+
+window.addEventListener('touchend', () => { isDragging = false; });
+
+slider.addEventListener('input', (e) => {
+    if (isPlaying) stopPlay();
+    updateFrame(parseInt(e.target.value, 10));
+});
+
+document.getElementById('carSelect').addEventListener('change', (e) => {
+    currentCar = e.target.value;
+    updateFrame(0);
+});
+
+document.getElementById('resetAngle').addEventListener('click', () => {
+    updateFrame(0);
+});
+
+function startPlay() {
+    isPlaying = true;
+    playBtn.textContent = '⏸ Pause';
+    playBtn.classList.add('active');
+    playInterval = setInterval(() => {
+        updateFrame(currentFrame + 1);
+    }, 45);
+}
+
+function stopPlay() {
+    isPlaying = false;
+    playBtn.textContent = '▶ Auto-Spin';
+    playBtn.classList.remove('active');
+    clearInterval(playInterval);
+}
+
+playBtn.addEventListener('click', () => {
+    if (isPlaying) stopPlay(); else startPlay();
+});
+
+// Lightbox
+function openLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').style.display = 'flex';
+}
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+}
+</script>
+</body>
+</html>
